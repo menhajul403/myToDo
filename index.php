@@ -1,46 +1,183 @@
+<?php
+define("TASKS_FILE", "tasks.json");
+date_default_timezone_set("Asia/Dhaka");
+// ✅ Load Tasks
+function loadTasks(): array {
+    if (!file_exists(TASKS_FILE)) {
+        return [];
+    }
+
+    $data = file_get_contents(TASKS_FILE);
+    return $data ? json_decode($data, true) : [];
+}
+$tasks = loadTasks();
+
+// ✅ Save Tasks
+function saveTasks(array $tasks): void {
+    $json = json_encode($tasks, JSON_PRETTY_PRINT);
+    file_put_contents(TASKS_FILE, $json);
+}
+
+
+
+// ✅ Add Task
+if (isset($_POST['add'])) {
+    $taskText = trim($_POST['task']);
+
+    if ($taskText !== "") {
+        $tasks[] = [
+            "task" => $taskText,
+            "done" => false,
+            "date" => date("d-m-Y h:i:s A") 
+        ];
+        saveTasks($tasks);
+    }
+    header("Location: index.php");
+    exit;
+}
+
+// ✅ Delete Task
+if (isset($_GET['delete'])) {
+    $index = $_GET['delete'];
+    unset($tasks[$index]);
+    $tasks = array_values($tasks);
+    saveTasks($tasks);
+    header("Location: index.php");
+    exit;
+}
+
+// ✅ Toggle Task Done/Undone
+if (isset($_GET['toggle'])) {
+    $index = $_GET['toggle'];
+    $tasks[$index]['done'] = !$tasks[$index]['done'];
+    saveTasks($tasks);
+    header("Location: index.php");
+    exit;
+}
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ToDo List UI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<title>Simple ToDo App</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        width: 450px;
+        margin: 40px auto;
+    }
+    h2 {
+        text-align: center;
+    }
+    .task {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        margin: 5px 0;
+        background: #f2f2f2;
+        border-radius: 5px;
+    }
+    .done {
+        text-decoration: line-through;
+        color: green;
+    }
+    .btn {
+        padding: 4px 10px;
+        margin-left: 5px;
+        cursor: pointer;
+        border: none;
+        border-radius: 3px;
+    }
+    .delete {
+        background: red;
+        color: #fff;
+        text-decoration: none;
+
+    }
+    .toggle {
+        background: green;
+        color: #fff;
+         text-decoration: none;
+    }
+</style>
+
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-800 min-h-screen flex items-center justify-center p-4">
+<body>
+<!-- show Task -->
+<h2>✅ My To-Do List</h2>
 
-  <!-- ToDo Container -->
-  <div class="bg-white/10 backdrop-blur-md rounded-2xl shadow-xl w-full max-w-md p-6">
-    <h1 class="text-2xl font-bold text-white text-center mb-6">📝 My ToDo List</h1>
+<form method="POST">
+    <input  style="
+        width: 70%;
+        height: 38px;
+        padding: 8px 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 15px;
+    " type="text" name="task" placeholder="Enter task..." required>
+    <button  style="
+        background-color: green;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 15px;
+        margin-left: 5px;
 
-    <!-- Add Task -->
-    <form id="addTaskForm" class="flex mb-4">
-      <input type="text" id="taskInput" placeholder="নতুন টাস্ক লিখুন..."
-             class="flex-1 px-4 py-2 rounded-l-lg border-none outline-none bg-white/20 text-white placeholder-white/70">
-      <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 rounded-r-lg font-semibold">
-        ➕ Add
-      </button>
-    </form>
+    " name="add">Add</button>
+</form>
 
-    <!-- Task List -->
-    <ul id="taskList" class="space-y-3">
-      <!-- Example Task -->
-      <li class="flex items-center justify-between bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg shadow hover:scale-105 transition">
-        <div class="flex items-center gap-3">
-          <input type="checkbox" class="w-5 h-5 accent-indigo-500">
-          <span class="text-white">Example Task</span>
-        </div>
-        <button class="text-red-500 hover:text-red-700 font-bold">❌</button>
-      </li>
-    </ul>
+<hr>
+<table style="width:100%" border="1" cellpadding="10">
+<tr>
+    <th>SL.No</th>
+    <th>Tasks</th>
+    <th>Date & Time</th>
+    <th>Action</th>
+</tr>
 
-    <!-- Footer -->
-    <div class="mt-6 text-white/70 text-sm text-center">
-      <p>✅ Mark as done | ❌ Delete Task</p>
-    </div>
-  </div>
+<?php foreach ($tasks as $index => $task): ?>
+<tr>
+    <td><?= $index + 1; ?></td>
 
- 
+    <!-- Task Title -->
+    <td class="<?= $task['done'] ? 'done' : '' ?>">
+        <?= $task['task']; ?>
+    </td>
 
+    <!-- Date Time -->
+    <td><?= $task['date']; ?></td>
+
+    <!-- Action Buttons -->
+    <td>
+        <!-- Toggle Done/Undone -->
+        <a class="toggle" href="?toggle=<?= $index ?>">
+            <?= $task['done'] ? 'Undo' : 'Done' ?>
+        </a>
+
+        |
+        
+      
+
+        |
+        
+        <!-- Delete -->
+        <a class="delete" 
+           href="?delete=<?= $index ?>" 
+           onclick="return confirm('Delete this task?')">
+           Delete
+        </a>
+    </td>
+</tr>
+<?php endforeach; ?>
+
+
+
+</table>
 
 </body>
 </html>
